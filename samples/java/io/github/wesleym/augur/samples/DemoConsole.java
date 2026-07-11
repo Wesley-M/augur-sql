@@ -21,14 +21,14 @@ public final class DemoConsole {
 	private static final int LIMIT = 10;
 
 	private static final List<String> EXAMPLES = List.of(
-			"select * from app|",
-			"select p.| from patient p",
-			"select * from appointment a join pat|",
-			"select * from patient p join pro|",
-			"select * from appointment a join patient p on |",
-			"select p.first_name, count(*) from patient p group by |",
-			"select * from appointment where status = |",
-			"insert into patient |");
+			"select * from bat|",
+			"select l.| from legionary l",
+			"select * from battle b join leg|",
+			"select * from legionary l join gen|",
+			"select * from battle b join legionary l on |",
+			"select l.name, count(*) from legionary l group by |",
+			"select * from battle where outcome = |",
+			"insert into legionary |");
 
 	private DemoConsole() { }
 

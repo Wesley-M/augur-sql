@@ -21,17 +21,18 @@ network, no threads, and no dependencies.
 
 ```java
 Augur augur = Augur.create(catalog, Dialects.POSTGRES);
-Completion c = augur.complete("select * from app", 17);
-c.first().orElseThrow().insertText(); // "appointment"
+Completion c = augur.complete("select * from bat", 17);
+c.first().orElseThrow().insertText(); // "battle"
 ```
 
 ---
 
 ## See it complete
 
-Each clip is real engine output — a short trigger becomes a correct, schema-derived
-statement. What makes a completion impressive isn't the menu; it's the **operation** it
-performs for you. Every `complete()` call runs in microseconds (watch the status bar).
+Type a few characters, accept, and Augur writes the rest from your schema. Each clip
+below is real engine output — no screen recording — completing against a small Roman
+legion schema: `battle`, `legionary`, `general`, and the `oath` that binds them. The
+status bar shows the classified context and the time each `complete()` took.
 
 <table>
 <tr>
@@ -41,7 +42,7 @@ performs for you. Every `complete()` call runs in microseconds (watch the status
 </td>
 <td width="50%" align="center" valign="top">
 <img src="docs/media/join-path.gif" alt="Two-hop join path" width="100%"><br>
-<b>Two-hop join path</b><br><sub>bridged through the junction table</sub>
+<b>Two-hop join path</b><br><sub>bridged through the <code>oath</code> junction</sub>
 </td>
 </tr>
 <tr>
@@ -78,9 +79,9 @@ regenerated from the engine itself with `./gradlew renderGifs`.
 ./gradlew runQuickstart    # narrated tour of every completion family
 ```
 
-All three run against a shared demo catalog — a small clinic schema with foreign
-keys, a junction table, a view, column roles, row counts, and value profiles —
-and use `|` to mark the caret, e.g. `select * from appointment a join pat|`.
+All three run against a shared demo catalog — a small Roman legion schema with foreign
+keys, a junction table (`oath`), a view, column roles, row counts, and value profiles —
+and use `|` to mark the caret, e.g. `select * from battle b join leg|`.
 
 > **In the Swing demo:** completion pops up as you type. `Tab` accepts. `↑ ↓`
 > navigate; `Enter` accepts *after* you navigate, and otherwise just inserts a
@@ -97,28 +98,28 @@ import io.github.wesleym.augur.Dialects;
 import io.github.wesleym.augur.Provenance;
 
 Catalog catalog = Catalog.builder()
-        .table("appointment", t -> t
+        .table("battle", t -> t
                 .column("id", "integer", c -> c.primaryKey())
-                .column("patient_id", "integer",
-                        c -> c.referencing("patient", "id", Provenance.DECLARED))
-                .column("status", "varchar")
-                .rowCount(48_210))
-        .table("patient", t -> t
+                .column("legionary_id", "integer",
+                        c -> c.referencing("legionary", "id", Provenance.DECLARED))
+                .column("outcome", "varchar")
+                .rowCount(9_216))
+        .table("legionary", t -> t
                 .column("id", "integer", c -> c.primaryKey())
-                .column("first_name", "varchar")
-                .column("email", "varchar", c -> c.role(ColumnRole.SENSITIVE)))
+                .column("name", "varchar")
+                .column("denarii", "integer", c -> c.role(ColumnRole.SENSITIVE)))
         .build();
 
 Augur augur = Augur.create(catalog, Dialects.POSTGRES);
 
-var completion = augur.complete("select * from app");
-// completion.first().orElseThrow().insertText() == "appointment"
+var completion = augur.complete("select * from bat");
+// completion.first().orElseThrow().insertText() == "battle"
 
-var join = augur.complete("select * from appointment a join pat", 36);
-// join.first().orElseThrow().insertText() == "patient p ON p.id = a.patient_id"
+var join = augur.complete("select * from battle b join leg", 31);
+// join.first().orElseThrow().insertText() == "legionary l ON l.id = b.legionary_id"
 
-var insert = augur.complete("insert into patient ", 20);
-// insert.first().orElseThrow().insertText() == "(id, first_name, email) values (?, ?, ?)"
+var insert = augur.complete("insert into legionary ", 22);
+// insert.first().orElseThrow().insertText() == "(id, name, denarii) values (?, ?, ?)"
 ```
 
 ## Host integration
@@ -142,16 +143,16 @@ See [docs/host-integration.md](docs/host-integration.md) and the dependency-free
 <summary><b>Completion families</b> (click to expand)</summary>
 
 - **Tables & views** in table-reference and join-target positions
-- **Columns**, scope-aware, including alias-qualified forms like `p.`
+- **Columns**, scope-aware, including alias-qualified forms like `l.`
 - **Aliases** drawn from the sources visible in scope
-- **Star expansion** — `*` and `p.*`
-- **Explicit column lists** — `p.id, p.first_name`
-- **FK-backed join targets** — `patient p ON p.id = a.patient_id`
-- **Two-hop join paths** through junction tables — `provider p2 via patient_provider`
-- **FK-backed ON predicates** — `p.id = a.patient_id`
-- **INSERT scaffolds** — `(id, first_name) values (?, ?)`
+- **Star expansion** — `*` and `l.*`
+- **Explicit column lists** — `l.id, l.name`
+- **FK-backed join targets** — `legionary l ON l.id = b.legionary_id`
+- **Two-hop join paths** through junction tables — `general g via oath`
+- **FK-backed ON predicates** — `l.id = b.legionary_id`
+- **INSERT scaffolds** — `(id, name) values (?, ?)`
 - **GROUP BY backfill** from non-aggregated select expressions
-- **Profiled values** — `'open'` after `status =`
+- **Profiled values** — `'triumph'` after `outcome =`
 - **Keywords** at statement heads and clause follows
 
 Candidates are generated, then filtered and ordered by the matcher and ranker.
@@ -163,10 +164,10 @@ Quiet contexts (inside strings and comments) suppress completion entirely.
 <summary><b>Understanding layer</b> — lexer, statement splitter, caret classifier, scope resolver</summary>
 
 ```java
-var tokens    = SqlLexer.lex("select * from patient", Dialects.ANSI);
+var tokens    = SqlLexer.lex("select * from legionary", Dialects.ANSI);
 var statement = StatementSplitter.statementAt("select 1; select 2", 12, Dialects.ANSI);
-var context   = CaretClassifier.classify("select * from patient where |", 28, Dialects.ANSI);
-var scope     = ScopeResolver.resolveStatement("select * from patient p", Dialects.ANSI);
+var context   = CaretClassifier.classify("select * from battle where ", 27, Dialects.ANSI);
+var scope     = ScopeResolver.resolveStatement("select * from legionary l", Dialects.ANSI);
 ```
 
 Comments are dropped from token streams; strings and comments are retained as
@@ -181,9 +182,9 @@ incomplete SQL and caps recursive child scopes.
 <summary><b>Feel layer</b> — hump matcher, ranker, insertion planner</summary>
 
 ```java
-var match  = HumpMatcher.match("pi", "patient_id");
-var ranked = Ranker.rank(candidates, "pat", new Context.TableRef("pat"), Usage.none());
-var span   = InsertionPlanner.replacementSpan("select * from app", 17, Dialects.ANSI);
+var match  = HumpMatcher.match("li", "legionary_id");
+var ranked = Ranker.rank(candidates, "leg", new Context.TableRef("leg"), Usage.none());
+var span   = InsertionPlanner.replacementSpan("select * from bat", 17, Dialects.ANSI);
 ```
 
 The matcher returns tier, score, and highlight positions. The ranker returns
@@ -221,13 +222,13 @@ directly or use Augur's default containers:
 
 ```java
 DecayingUsage usage = new DecayingUsage();
-usage.observeStatement("select * from appointment where status = 'open'");
+usage.observeStatement("select * from battle where outcome = 'triumph'");
 
 Profiles profiles = Profiles.builder()
-        .values("appointment", "status", List.of(
-                new ValueShare("open", 0.62, false),
-                new ValueShare("closed", 0.31, false)))
-        .distinctCount("appointment", "status", 2)
+        .values("battle", "outcome", List.of(
+                new ValueShare("triumph", 0.44, false),
+                new ValueShare("defeat", 0.29, false)))
+        .distinctCount("battle", "outcome", 4)
         .build();
 
 String htmlDoc = completion.first().orElseThrow().doc().html();

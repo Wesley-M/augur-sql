@@ -20,23 +20,23 @@ public final class Quickstart {
 
 	private static final List<Scenario> SCENARIOS = List.of(
 			new Scenario("Table reference",
-					"select * from app|"),
+					"select * from bat|"),
 			new Scenario("Qualified column (alias-aware)",
-					"select p.fi| from patient p"),
+					"select l.cog| from legionary l"),
 			new Scenario("Column-list expansion for a source",
-					"select p.| from patient p"),
+					"select l.| from legionary l"),
 			new Scenario("FK-backed JOIN target",
-					"select * from appointment a join pat|"),
+					"select * from battle b join leg|"),
 			new Scenario("Two-hop join path via a junction table",
-					"select * from patient p join pro|"),
+					"select * from legionary l join gen|"),
 			new Scenario("ON predicate from a foreign key",
-					"select * from appointment a join patient p on |"),
+					"select * from battle b join legionary l on |"),
 			new Scenario("GROUP BY backfill from the select list",
-					"select p.first_name, p.last_name, count(*) from patient p group by |"),
+					"select l.name, l.century, count(*) from legionary l group by |"),
 			new Scenario("Profiled value literal",
-					"select * from appointment where status = |"),
+					"select * from battle where outcome = |"),
 			new Scenario("INSERT column/value scaffold",
-					"insert into patient |"));
+					"insert into legionary |"));
 
 	public static void main(String[] args) {
 		Augur augur = DemoCatalog.augur();

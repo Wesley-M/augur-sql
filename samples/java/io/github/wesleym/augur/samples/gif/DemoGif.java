@@ -49,18 +49,18 @@ public final class DemoGif {
 			String prefix, String typed, String tail) { }
 
 	private static final List<Scenario> SCENARIOS = List.of(
-			new Scenario("join", "Foreign-key join", "written from appointment.patient_id → patient.id",
-					"select * from appointment a join ", "pat", ""),
-			new Scenario("join-path", "Two-hop join path", "bridged through the patient_provider junction",
-					"select * from patient p join ", "pro", ""),
+			new Scenario("join", "Foreign-key join", "battle.legionary_id → legionary.id",
+					"select * from battle b join ", "leg", ""),
+			new Scenario("join-path", "Two-hop join path", "bridged through the oath junction",
+					"select * from legionary l join ", "gen", ""),
 			new Scenario("on", "Join predicate", "recovered from the foreign key",
-					"select * from appointment a join patient p ", "on ", ""),
+					"select * from battle b join legionary l ", "on ", ""),
 			new Scenario("group-by", "GROUP BY backfill", "the non-aggregated select columns",
-					"select p.first_name, count(*) from patient p group ", "by ", ""),
+					"select l.name, count(*) from legionary l group ", "by ", ""),
 			new Scenario("insert", "INSERT scaffold", "columns paired with value placeholders",
-					"insert into patient", " ", ""),
+					"insert into legionary", " ", ""),
 			new Scenario("value", "Value from profile", "ranked by observed frequency",
-					"select * from appointment a where status ", "= ", ""));
+					"select * from battle b where outcome ", "= ", ""));
 
 	private static final int W = 560;
 	private static final int H = 232;

@@ -17,7 +17,7 @@ tracker. It uses exponential decay with a 30-day half-life by default.
 
 ```java
 DecayingUsage usage = new DecayingUsage();
-usage.observeStatement("select * from appointment where status = 'open'");
+usage.observeStatement("select * from battle where outcome = 'triumph'");
 usage.observeAcceptance(candidate);
 
 String persisted = usage.save();
@@ -41,11 +41,11 @@ their own cache or use the immutable `ProfileSnapshot` builder:
 
 ```java
 Profiles profiles = Profiles.builder()
-        .values("appointment", "status", List.of(
-                new ValueShare("open", 0.62, false),
-                new ValueShare("closed", 0.31, false)))
-        .distinctCount("appointment", "status", 2)
-        .nullFraction("appointment", "status", 0.10)
+        .values("battle", "outcome", List.of(
+                new ValueShare("triumph", 0.62, false),
+                new ValueShare("defeat", 0.31, false)))
+        .distinctCount("battle", "outcome", 2)
+        .nullFraction("battle", "outcome", 0.10)
         .build();
 ```
 

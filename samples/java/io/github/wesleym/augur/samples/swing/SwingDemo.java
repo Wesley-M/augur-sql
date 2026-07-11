@@ -50,14 +50,14 @@ public final class SwingDemo {
 	private record Sample(String label, String sql) { }
 
 	private static final List<Sample> SAMPLES = List.of(
-			new Sample("Table", "select * from app|"),
-			new Sample("Column", "select p.| from patient p"),
-			new Sample("Join", "select * from appointment a join pat|"),
-			new Sample("Join path", "select * from patient p join pro|"),
-			new Sample("ON", "select * from appointment a join patient p on |"),
-			new Sample("Value", "select * from appointment a where status = |"),
-			new Sample("Group by", "select p.first_name, count(*) from patient p group by |"),
-			new Sample("Insert", "insert into patient |"));
+			new Sample("Table", "select * from bat|"),
+			new Sample("Column", "select l.| from legionary l"),
+			new Sample("Join", "select * from battle b join leg|"),
+			new Sample("Join path", "select * from legionary l join gen|"),
+			new Sample("ON", "select * from battle b join legionary l on |"),
+			new Sample("Value", "select * from battle b where outcome = |"),
+			new Sample("Group by", "select l.name, count(*) from legionary l group by |"),
+			new Sample("Insert", "insert into legionary |"));
 
 	private final Augur augur = DemoCatalog.augur();
 	private final JFrame frame = new JFrame("Augur SQL");
@@ -95,7 +95,7 @@ public final class SwingDemo {
 
 	public static void main(String[] args) {
 		if (args != null && List.of(args).contains("--smoke")) {
-			Completion smoke = DemoCatalog.augur().complete("select * from appointment a join pat");
+			Completion smoke = DemoCatalog.augur().complete("select * from battle b join leg");
 			System.out.println(smoke.first().map(Candidate::insertText).orElse("(none)"));
 			return;
 		}
