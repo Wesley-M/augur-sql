@@ -31,6 +31,8 @@ public final class Dialects {
 			.lex(LexProfile.ansi().withIdentifierQuote('[', ']'))
 			.keywords(keywords("GO", "IDENTITY", "NVARCHAR", "OFFSET", "TOP"))
 			.pagination(Pagination.top())
+			// bit columns take 1/0, and there is no current_date expression.
+			.literals(new Literals("1", "0", "", "CURRENT_TIMESTAMP"))
 			.types(TypeMap.ansi().with(".*\\b(uniqueidentifier)\\b.*", TypeFamily.TEXT))
 			.build();
 
@@ -38,6 +40,8 @@ public final class Dialects {
 			.lex(LexProfile.ansi().withAdditionalIdentifierQuote('[', ']'))
 			.keywords(keywords("AT", "AUTOINCREMENT", "START", "TOP"))
 			.pagination(Pagination.top())
+			// bit columns take 1/0; the special values are spelled with a space (CURRENT DATE).
+			.literals(new Literals("1", "0", "CURRENT DATE", "CURRENT TIMESTAMP"))
 			.build();
 
 	public static final Dialect SQLITE = Dialect.builder("SQLite")
@@ -46,6 +50,8 @@ public final class Dialects {
 					.withAdditionalIdentifierQuote('[', ']'))
 			.keywords(keywords("FALSE", "GLOB", "PRAGMA", "TRUE"))
 			.pagination(Pagination.limitOffset())
+			// booleans are stored as integers; 1/0 works on every SQLite version.
+			.literals(new Literals("1", "0", "CURRENT_DATE", "CURRENT_TIMESTAMP"))
 			.build();
 
 	public static final Dialect H2 = Dialect.builder("H2")

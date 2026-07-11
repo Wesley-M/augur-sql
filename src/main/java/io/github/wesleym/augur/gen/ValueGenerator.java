@@ -5,10 +5,12 @@ import io.github.wesleym.augur.CandidateDoc;
 import io.github.wesleym.augur.CandidateKind;
 import io.github.wesleym.augur.Catalog;
 import io.github.wesleym.augur.ColumnRole;
+import io.github.wesleym.augur.Literals;
 import io.github.wesleym.augur.Profiles;
 import io.github.wesleym.augur.TypeFamily;
 import io.github.wesleym.augur.ValueShare;
 import io.github.wesleym.augur.context.Context;
+import io.github.wesleym.augur.insert.InsertionPlanner;
 import io.github.wesleym.augur.scope.ResolvedScope;
 import io.github.wesleym.augur.scope.ScopeSource;
 import io.github.wesleym.augur.scope.SourceKind;
@@ -35,10 +37,16 @@ public final class ValueGenerator {
 	private ValueGenerator() { }
 
 	public static List<Candidate> generate(Catalog catalog, Profiles profiles, ResolvedScope scope, Context context) {
+		return generate(catalog, profiles, scope, context, null);
+	}
+
+	public static List<Candidate> generate(Catalog catalog, Profiles profiles, ResolvedScope scope, Context context,
+			InsertionPlanner insertion) {
 		if (!(context instanceof Context.ValueLiteral valueLiteral) || emptyCatalog(catalog)
 				|| valueLiteral.column().isEmpty()) {
 			return List.of();
 		}
+		Literals literals = GeneratorSupport.effectivePlanner(insertion).dialect().literals();
 		Profiles effectiveProfiles = profiles == null ? Profiles.empty() : profiles;
 		List<ColumnTarget> targets = targets(catalog, scope, valueLiteral);
 		if (targets.isEmpty()) {
@@ -54,6 +62,38 @@ public final class ValueGenerator {
 							insertText.length(), null, doc(effectiveProfiles, target, value)));
 				}
 			}
+			// Type-aware literals when there's no value profile to draw on: a boolean's two values, a temporal
+			// column's "now" so the user isn't stopped inventing a date. Deterministic — no host clock needed —
+			// and spelled per dialect (SQL Server/SQL Anywhere bit columns take 1/0, not true/false).
+			for (String template : typeTemplates(target.column(), literals)) {
+				if (seen.add(key(template))) {
+					out.add(new Candidate(new CandidateKind.Value(), template, "value", template, template.length(),
+							null, CandidateDoc.empty()));
+				}
+			}
+		}
+		return List.copyOf(out);
+	}
+
+	private static List<String> typeTemplates(Catalog.Column column, Literals literals) {
+		TypeFamily family = column.typeFamily();
+		String type = column.typeName().toLowerCase(Locale.ROOT);
+		if (family == TypeFamily.BOOLEAN || type.equals("bool") || type.equals("boolean")) {
+			return nonEmpty(literals.booleanTrue(), literals.booleanFalse());
+		}
+		if (family == TypeFamily.TEMPORAL || type.contains("date") || type.contains("time")) {
+			return nonEmpty(literals.currentDate(), literals.currentTimestamp());
+		}
+		return List.of();
+	}
+
+	private static List<String> nonEmpty(String first, String second) {
+		List<String> out = new ArrayList<>(2);
+		if (!first.isEmpty()) {
+			out.add(first);
+		}
+		if (!second.isEmpty()) {
+			out.add(second);
 		}
 		return List.copyOf(out);
 	}

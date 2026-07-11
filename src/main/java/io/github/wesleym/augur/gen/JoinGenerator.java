@@ -5,6 +5,7 @@ import io.github.wesleym.augur.CandidateDoc;
 import io.github.wesleym.augur.CandidateKind;
 import io.github.wesleym.augur.Catalog;
 import io.github.wesleym.augur.Provenance;
+import io.github.wesleym.augur.TypeFamily;
 import io.github.wesleym.augur.context.Context;
 import io.github.wesleym.augur.insert.InsertionPlanner;
 import io.github.wesleym.augur.scope.ResolvedScope;
@@ -13,6 +14,7 @@ import io.github.wesleym.augur.scope.ScopeSource;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -215,7 +217,36 @@ public final class JoinGenerator {
 				fkNames.add(key(column.name()));
 			}
 		}
-		return !primaryKeys.isEmpty() && fkNames.containsAll(primaryKeys);
+		// The classic shape: the primary key IS the FK pair.
+		if (!primaryKeys.isEmpty() && fkNames.containsAll(primaryKeys)) {
+			return true;
+		}
+		// The ORM shape: a surrogate id plus the two FKs, with nothing but audit timestamps besides. Any
+		// payload column means the table is an entity in its own right, not a junction.
+		int surrogateKeys = 0;
+		for (Catalog.Column column : table.columns()) {
+			if (column.foreignKey()) {
+				continue;
+			}
+			if (column.primaryKey()) {
+				if (++surrogateKeys > 1) {
+					return false;
+				}
+				continue;
+			}
+			if (!temporal(column)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static boolean temporal(Catalog.Column column) {
+		if (column.typeFamily() == TypeFamily.TEMPORAL) {
+			return true;
+		}
+		String type = column.typeName().toLowerCase(Locale.ROOT);
+		return type.contains("date") || type.contains("time");
 	}
 
 	private static List<Catalog.Column> foreignKeys(Catalog.Table table) {

@@ -9,13 +9,14 @@ import java.util.Set;
 
 /** SQL dialect descriptor used by lexing, insertion planning, and generation. */
 public record Dialect(String name, LexProfile lex, Set<String> keywords,
-		IdentifierRules identifiers, Qualification qualification, Pagination pagination, TypeMap types) {
+		IdentifierRules identifiers, Qualification qualification, Pagination pagination, TypeMap types,
+		Literals literals) {
 	public Dialect(String name) {
 		this(name, LexProfile.ansi(), ansiKeywords());
 	}
 
 	public Dialect(String name, LexProfile lex, Set<String> keywords) {
-		this(name, lex, keywords, null, null, null, null);
+		this(name, lex, keywords, null, null, null, null, null);
 	}
 
 	public Dialect {
@@ -26,6 +27,7 @@ public record Dialect(String name, LexProfile lex, Set<String> keywords,
 		qualification = qualification == null ? Qualification.none() : qualification;
 		pagination = pagination == null ? Pagination.none() : pagination;
 		types = types == null ? TypeMap.ansi() : types;
+		literals = literals == null ? Literals.ansi() : literals;
 	}
 
 	public static Builder builder(String name) {
@@ -40,7 +42,8 @@ public record Dialect(String name, LexProfile lex, Set<String> keywords,
 				.identifierRules(identifiers)
 				.qualification(qualification)
 				.pagination(pagination)
-				.types(types);
+				.types(types)
+				.literals(literals);
 	}
 
 	public boolean isKeyword(String text) {
@@ -80,7 +83,7 @@ public record Dialect(String name, LexProfile lex, Set<String> keywords,
 		// Resync reserved words to the new keywords, but keep the configured
 		// identifier case folding instead of resetting it to PRESERVE.
 		IdentifierRules nextRules = IdentifierRules.ansi(next).withUnquotedCase(identifiers.unquotedCase());
-		return new Dialect(name, lex, next, nextRules, qualification, pagination, types);
+		return new Dialect(name, lex, next, nextRules, qualification, pagination, types, literals);
 	}
 
 	public static Set<String> ansiKeywords() {
@@ -100,6 +103,7 @@ public record Dialect(String name, LexProfile lex, Set<String> keywords,
 		private Qualification qualification;
 		private Pagination pagination;
 		private TypeMap types;
+		private Literals literals;
 
 		private Builder() { }
 
@@ -161,8 +165,13 @@ public record Dialect(String name, LexProfile lex, Set<String> keywords,
 			return this;
 		}
 
+		public Builder literals(Literals literals) {
+			this.literals = literals;
+			return this;
+		}
+
 		public Dialect build() {
-			return new Dialect(name, lex, keywords, identifierRules(), qualification, pagination, types);
+			return new Dialect(name, lex, keywords, identifierRules(), qualification, pagination, types, literals);
 		}
 
 		private IdentifierRules identifierRules() {

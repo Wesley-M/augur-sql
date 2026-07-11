@@ -60,16 +60,25 @@ class CandidateGeneratorTest {
 				KeywordGenerator.generate(new Context.StatementHead(""), null).stream()
 						.map(Candidate::display)
 						.toList());
+		// The row-count clause follows the dialect's pagination style: ANSI spells it FETCH FIRST, Postgres
+		// LIMIT, and SQL Server has no follow-position spelling at all (TOP lives after SELECT).
 		assertEquals(List.of("from", "where", "join", "inner join", "left join", "right join", "full join",
-						"cross join", "group by", "order by", "having", "limit", "union", "on"),
+						"cross join", "group by", "order by", "having", "fetch first", "union", "on"),
 				KeywordGenerator.generate(new Context.ExpressionRef(""), null).stream()
 						.map(Candidate::display)
 						.toList());
+		assertTrue(KeywordGenerator.generate(new Context.ExpressionRef(""),
+						new InsertionPlanner(io.github.wesleym.augur.Dialects.POSTGRES)).stream()
+				.anyMatch(candidate -> candidate.display().equals("limit")));
+		assertTrue(KeywordGenerator.generate(new Context.ExpressionRef(""),
+						new InsertionPlanner(io.github.wesleym.augur.Dialects.SQLSERVER)).stream()
+				.noneMatch(candidate -> candidate.display().equals("limit")
+						|| candidate.display().equals("fetch first")));
 		assertEquals(List.of("and", "or", "not", "null", "case"),
 				KeywordGenerator.generate(new Context.ColumnRef(""), null).stream()
 						.map(Candidate::display)
 						.toList());
-		assertEquals(List.of("null", "true", "false"),
+		assertEquals(List.of("null"),
 				KeywordGenerator.generate(new Context.ValueLiteral(""), null).stream()
 						.map(Candidate::display)
 						.toList());
@@ -391,7 +400,7 @@ class CandidateGeneratorTest {
 						.column("provider_id", "integer", c -> c.primaryKey()
 								.referencing("provider", "id", Provenance.DECLARED))
 						.column("note", "varchar"))
-				.table("non_covering_bridge", t -> t
+				.table("surrogate_bridge", t -> t
 						.column("id", "integer", c -> c.primaryKey())
 						.column("patient_id", "integer", c -> c.referencing("patient", "id", Provenance.DECLARED))
 						.column("provider_id", "integer",
@@ -422,9 +431,10 @@ class CandidateGeneratorTest {
 		assertTrue(candidates.stream()
 				.anyMatch(candidate -> candidate.kind() instanceof CandidateKind.JoinPath path
 						&& path.via().equals("patient_provider_note")));
+		// A surrogate-id bridge (own PK plus the two FKs, no payload) is a junction under the ORM-shape rule.
 		assertTrue(candidates.stream()
-				.noneMatch(candidate -> candidate.kind() instanceof CandidateKind.JoinPath path
-						&& path.via().equals("non_covering_bridge")));
+				.anyMatch(candidate -> candidate.kind() instanceof CandidateKind.JoinPath path
+						&& path.via().equals("surrogate_bridge")));
 		assertTrue(visibleTargetCandidates.stream()
 				.noneMatch(candidate -> candidate.kind() instanceof CandidateKind.JoinPath path
 						&& path.via().equals("forced_bridge")));
@@ -629,7 +639,7 @@ class CandidateGeneratorTest {
 		assertEquals("crm.appointment.score", candidates.get(0).doc().qualifiedName());
 		assertEquals(3L, candidates.get(0).doc().distinctCount());
 		assertEquals(0.25, candidates.get(0).doc().nullFraction());
-		assertEquals(List.of("true"), ValueGenerator.generate(catalog, profiles, scope,
+		assertEquals(List.of("true", "false"), ValueGenerator.generate(catalog, profiles, scope,
 				new Context.ValueLiteral("", "a", "active")).stream().map(Candidate::insertText).toList());
 	}
 
@@ -680,7 +690,7 @@ class CandidateGeneratorTest {
 				new Context.ValueLiteral("", "", "status")).stream().map(Candidate::insertText).toList());
 		assertEquals(List.of("12.5"), ValueGenerator.generate(catalog, profiles, qualifiedScope,
 				new Context.ValueLiteral("", "a", "score")).stream().map(Candidate::insertText).toList());
-		assertEquals(List.of("true"), ValueGenerator.generate(catalog, profiles,
+		assertEquals(List.of("true", "false"), ValueGenerator.generate(catalog, profiles,
 				ScopeResolver.resolveStatement("select * from feature_flag f where enabled = |", null),
 				new Context.ValueLiteral("", "", "enabled")).stream().map(Candidate::insertText).toList());
 		assertEquals(List.of("19.99"), ValueGenerator.generate(catalog, profiles,
@@ -694,6 +704,32 @@ class CandidateGeneratorTest {
 						.build(), profile("appointment", "status", List.of(new ValueShare("kept", 0.10, false))),
 				ScopeResolver.resolveStatement("select * from crm.appointment a where status = |", null),
 				new Context.ValueLiteral("", "", "status")).stream().map(Candidate::insertText).toList());
+	}
+
+	@Test
+	void valueGeneratorOffersTypeAwareTemplatesWithoutProfiles() {
+		Catalog catalog = Catalog.builder()
+				.table("appt", t -> t
+						.column("is_active", "boolean")
+						.column("flag", "bit", c -> c.typeFamily(TypeFamily.BOOLEAN))
+						.column("created_at", "timestamp")
+						.column("day", "d", c -> c.typeFamily(TypeFamily.TEMPORAL))
+						.column("name", "varchar"))
+				.build();
+		ResolvedScope scope = ScopeResolver.resolveStatement("select * from appt a where x = |", null);
+
+		assertEquals(List.of("true", "false"), templateValues(catalog, scope, "is_active"));  // boolean by type name
+		assertEquals(List.of("true", "false"), templateValues(catalog, scope, "flag"));       // boolean by family
+		assertEquals(List.of("current_date", "current_timestamp"),
+				templateValues(catalog, scope, "created_at"));                                // temporal by type name
+		assertEquals(List.of("current_date", "current_timestamp"),
+				templateValues(catalog, scope, "day"));                                       // temporal by family
+		assertTrue(templateValues(catalog, scope, "name").isEmpty());                         // no template for text
+	}
+
+	private static List<String> templateValues(Catalog catalog, ResolvedScope scope, String column) {
+		return ValueGenerator.generate(catalog, Profiles.empty(), scope, new Context.ValueLiteral("", "a", column))
+				.stream().map(Candidate::insertText).toList();
 	}
 
 	@Test

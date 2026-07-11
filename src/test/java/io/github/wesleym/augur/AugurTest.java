@@ -195,6 +195,51 @@ class AugurTest {
 	}
 
 	@Test
+	void completesJunctionJoinPathsThroughSurrogateKeyJunctions() {
+		// The ORM shape: the junction has its own id plus the two FKs and audit stamps — no composite key.
+		Catalog catalog = Catalog.builder()
+				.table("patient", t -> t.column("id", "integer", c -> c.primaryKey()))
+				.table("provider", t -> t.column("id", "integer", c -> c.primaryKey()))
+				.table("patient_provider", t -> t
+						.column("id", "integer", c -> c.primaryKey())
+						.column("patient_id", "integer", c -> c.referencing("patient", "id", Provenance.INFERRED))
+						.column("provider_id", "integer", c -> c.referencing("provider", "id", Provenance.INFERRED))
+						.column("created_at", "timestamp")
+						.column("updated_at", "timestamp"))
+				.build();
+		Augur augur = augur(catalog, Dialects.ANSI);
+		String sql = "select * from patient p join pro";
+
+		Completion completion = augur.complete(sql, sql.length());
+
+		assertTrue(completion.candidates().stream()
+						.anyMatch(c -> c.kind() instanceof CandidateKind.JoinPath),
+				"surrogate-key junction should yield a two-hop path");
+	}
+
+	@Test
+	void entityWithTwoForeignKeysAndPayloadIsNotAJunction() {
+		// Two FKs plus real payload columns: an entity in its own right, never a junction path.
+		Catalog catalog = Catalog.builder()
+				.table("patient", t -> t.column("id", "integer", c -> c.primaryKey()))
+				.table("chair", t -> t.column("id", "integer", c -> c.primaryKey()))
+				.table("appointment", t -> t
+						.column("id", "integer", c -> c.primaryKey())
+						.column("patient_id", "integer", c -> c.referencing("patient", "id", Provenance.INFERRED))
+						.column("chair_id", "integer", c -> c.referencing("chair", "id", Provenance.INFERRED))
+						.column("note", "varchar"))
+				.build();
+		Augur augur = augur(catalog, Dialects.ANSI);
+		String sql = "select * from patient p join ";
+
+		Completion completion = augur.complete(sql, sql.length());
+
+		assertTrue(completion.candidates().stream()
+						.noneMatch(c -> c.kind() instanceof CandidateKind.JoinPath),
+				"an entity with payload must not be treated as a junction");
+	}
+
+	@Test
 	void completesJunctionJoinPaths() {
 		Catalog catalog = Catalog.builder()
 				.table("patient", t -> t.column("id", "integer", c -> c.primaryKey()))

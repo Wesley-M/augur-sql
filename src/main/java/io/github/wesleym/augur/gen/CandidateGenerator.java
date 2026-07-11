@@ -31,7 +31,7 @@ public final class CandidateGenerator {
 		List<Candidate> out = new ArrayList<>();
 		out.addAll(JoinGenerator.generate(catalog, scope, context, insertion));
 		out.addAll(InsertGenerator.generate(catalog, scope, context, insertion));
-		out.addAll(ValueGenerator.generate(catalog, profiles, scope, context));
+		out.addAll(ValueGenerator.generate(catalog, profiles, scope, context, insertion));
 		out.addAll(GroupByGenerator.generate(context));
 		if (context instanceof Context.TableRef || context instanceof Context.JoinTarget) {
 			out.addAll(TableGenerator.generate(catalog, insertion));

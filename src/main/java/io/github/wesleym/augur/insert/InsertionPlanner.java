@@ -19,6 +19,10 @@ public final class InsertionPlanner {
 		this.dialect = dialect == null ? Dialects.ANSI : dialect;
 	}
 
+	public Dialect dialect() {
+		return dialect;
+	}
+
 	public static TextSpan replacementSpan(String sql, int caretOffset, Dialect dialect) {
 		return new InsertionPlanner(dialect).replacementSpan(sql, caretOffset);
 	}
