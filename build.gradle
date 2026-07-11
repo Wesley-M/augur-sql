@@ -1,0 +1,156 @@
+// Augur SQL - deterministic, schema-aware SQL completion for Java hosts.
+// Pure JDK by design: hosts provide snapshots; Augur owns understanding and ranking.
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'maven-publish'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        csv.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.90
+            }
+        }
+    }
+}
+tasks.named('check') { dependsOn tasks.named('jacocoTestCoverageVerification') }
+
+group = 'io.github.wesleym'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
+                name = 'augur-sql'
+                description = 'Deterministic, schema-aware SQL completion for JVM hosts.'
+                url = 'https://github.com/wesleym/augur-sql'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/license/mit'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'wesleym'
+                        name = 'Wesley Santos'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/wesleym/augur-sql'
+                    connection = 'scm:git:https://github.com/wesleym/augur-sql.git'
+                    developerConnection = 'scm:git:ssh://git@github.com:wesleym/augur-sql.git'
+                }
+            }
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+sourceSets {
+    samples {
+        java { srcDir 'samples/java' }
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    benchmarks {
+        java { srcDir 'benchmarks/java' }
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+tasks.register('runQuickstart', JavaExec) {
+    group = 'samples'
+    description = 'Runs the minimal Augur quickstart sample.'
+    classpath = sourceSets.samples.runtimeClasspath
+    mainClass = 'io.github.wesleym.augur.samples.Quickstart'
+}
+
+tasks.register('runDemoConsole', JavaExec) {
+    group = 'samples'
+    description = 'Runs the interactive terminal demo over the canned catalog.'
+    standardInput = System.in
+    classpath = sourceSets.samples.runtimeClasspath
+    mainClass = 'io.github.wesleym.augur.samples.DemoConsole'
+}
+
+tasks.register('runSwingDemo', JavaExec) {
+    group = 'samples'
+    description = 'Runs the interactive Swing completion demo.'
+    classpath = sourceSets.samples.runtimeClasspath
+    mainClass = 'io.github.wesleym.augur.samples.swing.SwingDemo'
+}
+
+tasks.register('renderGifs', JavaExec) {
+    group = 'samples'
+    description = 'Renders the engine-driven completion GIFs into docs/media.'
+    classpath = sourceSets.samples.runtimeClasspath
+    mainClass = 'io.github.wesleym.augur.samples.gif.DemoGif'
+    args = [file('docs/media').absolutePath]
+    jvmArgs = ['-Djava.awt.headless=true']
+}
+
+tasks.register('runBenchmarks', JavaExec) {
+    group = 'verification'
+    description = 'Runs the synthetic completion latency benchmark.'
+    classpath = sourceSets.benchmarks.runtimeClasspath
+    mainClass = 'io.github.wesleym.augur.bench.CompletionBenchmark'
+}
+
+tasks.register('samples') {
+    group = 'samples'
+    description = 'Lists runnable samples.'
+    doLast {
+        println '  gradlew runQuickstart    narrated tour of every completion family'
+        println '  gradlew runDemoConsole   interactive terminal demo'
+        println '  gradlew runSwingDemo     interactive Swing completion demo'
+        println '  gradlew renderGifs       regenerate the README completion GIFs'
+        println '  gradlew runBenchmarks    synthetic latency guard'
+    }
+}
+
+tasks.named('check') { dependsOn tasks.named('compileSamplesJava') }
+tasks.named('check') { dependsOn tasks.named('compileBenchmarksJava') }

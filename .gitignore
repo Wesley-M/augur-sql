@@ -1,0 +1,13 @@
+.gradle/
+build/
+out/
+*.class
+*.log
+.DS_Store
+
+# Static poster stills emitted by `gradlew renderGifs` for local QA; the
+# committed, README-referenced assets are the animated GIFs.
+docs/media/*.png
+
+# IDE
+.idea/
