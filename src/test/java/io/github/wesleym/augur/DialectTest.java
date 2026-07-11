@@ -65,7 +65,10 @@ class DialectTest {
 		assertTrue(dialect.isKeyword("UPSERT"));
 		assertFalse(dialect.isKeyword("select"));
 		assertTrue(dialect.needsQuoting("upsert"));
-		assertFalse(dialect.needsQuoting("total$"));
+		// '$' is a valid identifier part here (withDollarInIdentifiers), so an already-folded name is bare...
+		assertFalse(dialect.needsQuoting("TOTAL$"));
+		// ...but a name whose case differs from the dialect's folding must be quoted to resolve to it.
+		assertTrue(dialect.needsQuoting("total$"));
 		assertEquals("PATIENT", dialect.foldIdentifier("patient"));
 		assertTrue(dialect.qualification().hasOwnerPrefix());
 		assertEquals(TypeFamily.DECIMAL, dialect.typeFamily("money2"));
@@ -73,7 +76,8 @@ class DialectTest {
 		Dialect copy = dialect.toBuilder().name("copy").reservedWords(Set.of("only")).build();
 		assertEquals("copy", copy.name());
 		assertTrue(copy.needsQuoting("only"));
-		assertFalse(copy.needsQuoting("upsert"));
+		// No longer reserved (reservedWords was reassigned), and already in the dialect's UPPER folding, so bare.
+		assertFalse(copy.needsQuoting("UPSERT"));
 		assertEquals("PATIENT", copy.foldIdentifier("patient"));
 
 		Dialect orderInsensitive = Dialect.builder("order-insensitive")

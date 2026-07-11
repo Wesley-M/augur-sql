@@ -178,6 +178,23 @@ class AugurTest {
 	}
 
 	@Test
+	void offersWholeJoinWhileTypingTheJoinKeyword() {
+		Augur augur = augur(demoCatalog(), Dialects.ANSI);
+		String sql = "select * from appointment a jo";
+
+		Completion completion = augur.complete(sql, sql.length());
+		Candidate candidate = completion.candidates().stream()
+				.filter(c -> c.kind() instanceof CandidateKind.JoinClause)
+				.findFirst()
+				.orElseThrow();
+
+		// The whole join is offered before the JOIN keyword is finished: it leads with `join ` and carries the
+		// FK-backed target and ON predicate.
+		assertTrue(candidate.insertText().startsWith("join "), candidate.insertText());
+		assertTrue(candidate.insertText().contains(" ON "), candidate.insertText());
+	}
+
+	@Test
 	void completesJunctionJoinPaths() {
 		Catalog catalog = Catalog.builder()
 				.table("patient", t -> t.column("id", "integer", c -> c.primaryKey()))

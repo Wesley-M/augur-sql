@@ -57,7 +57,10 @@ public record Dialect(String name, LexProfile lex, Set<String> keywords,
 				return true;
 			}
 		}
-		return false;
+		// An unquoted reference is folded to the dialect's case before it is matched; if folding would
+		// change the identifier, the bare form wouldn't resolve to the stored name (PostgreSQL folds to
+		// lower case, so a stored "Accounts" must be quoted to be referenced). Quote whenever it would.
+		return !value.equals(foldIdentifier(value));
 	}
 
 	public String foldIdentifier(String identifier) {

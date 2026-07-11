@@ -36,7 +36,10 @@ public final class KeywordGenerator {
 			return List.of("select", "with", "insert", "update", "delete");
 		}
 		if (context instanceof Context.ExpressionRef) {
-			return List.of("where", "group by", "order by", "having", "limit");
+			// Covers both the position after the select list (needs FROM) and after a table/join (needs a JOIN
+			// or a trailing clause). The matcher prefix-filters, so only the keyword the user is typing surfaces.
+			return List.of("from", "where", "join", "inner join", "left join", "right join", "full join",
+					"cross join", "group by", "order by", "having", "limit", "union", "on");
 		}
 		if (context instanceof Context.ColumnRef || context instanceof Context.OnCondition) {
 			return List.of("and", "or", "not", "null", "case");

@@ -60,7 +60,8 @@ class CandidateGeneratorTest {
 				KeywordGenerator.generate(new Context.StatementHead(""), null).stream()
 						.map(Candidate::display)
 						.toList());
-		assertEquals(List.of("where", "group by", "order by", "having", "limit"),
+		assertEquals(List.of("from", "where", "join", "inner join", "left join", "right join", "full join",
+						"cross join", "group by", "order by", "having", "limit", "union", "on"),
 				KeywordGenerator.generate(new Context.ExpressionRef(""), null).stream()
 						.map(Candidate::display)
 						.toList());

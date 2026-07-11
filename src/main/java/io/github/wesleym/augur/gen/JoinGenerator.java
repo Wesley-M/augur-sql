@@ -38,7 +38,29 @@ public final class JoinGenerator {
 		if (context instanceof Context.OnCondition) {
 			return generateOnConditions(catalog, scope, insertion);
 		}
+		if (context instanceof Context.ExpressionRef expression) {
+			// After a table (before the JOIN keyword is even typed), offer the whole FK join up front: the user
+			// typing `jo` gets `join Accounts a ON a.id = b.account_id` in one go, not just the bare keyword.
+			return generateInlineJoins(catalog, scope, insertion, expression.prefix());
+		}
 		return List.of();
+	}
+
+	private static List<Candidate> generateInlineJoins(Catalog catalog, ResolvedScope scope,
+			InsertionPlanner insertion, String prefix) {
+		List<Candidate> targets = generateJoinTargets(catalog, scope, insertion);
+		if (targets.isEmpty()) {
+			return List.of();
+		}
+		String join = effectivePlanner(insertion).keyword(prefix, "join");   // "join" or "JOIN", mirroring case
+		List<Candidate> out = new ArrayList<>(targets.size());
+		for (Candidate target : targets) {
+			String insertText = join + " " + target.insertText();
+			String display = join + " " + target.display();
+			out.add(new Candidate(target.kind(), display, target.detail(), insertText, insertText.length(), null,
+					target.doc()));
+		}
+		return List.copyOf(out);
 	}
 
 	public static List<Candidate> generateJoinTargets(Catalog catalog, ResolvedScope scope,
